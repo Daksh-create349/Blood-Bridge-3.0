@@ -3,7 +3,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { MapContainer, TileLayer, Marker, Popup, useMap, LayersControl } from 'react-leaflet';
 import { INITIAL_CAMPS } from '../constants';
 import { Card, CardContent, Button, Dialog, Input, Badge } from '../components/ui/UIComponents';
-import { Calendar, Clock, MapPin, Camera, Download, User, Share2, Crosshair, Navigation, Layers, Globe, Maximize, Minimize } from 'lucide-react';
+import { Calendar, Clock, MapPin, Camera, Download, User, Share2, Crosshair, Navigation, Layers, Globe, Maximize, Minimize, CheckCircle2 } from 'lucide-react';
 import L from 'leaflet';
 
 // Fix for Leaflet default icon issues in Webpack/React environments
@@ -117,7 +117,8 @@ const Camps: React.FC = () => {
   const [registerOpen, setRegisterOpen] = useState(false);
   const [step, setStep] = useState(1);
   const [selectedCamp, setSelectedCamp] = useState<typeof INITIAL_CAMPS[0] | null>(null);
-  const [userData, setUserData] = useState({ name: '', age: '', photo: '' });
+  const [userData, setUserData] = useState({ name: '', age: '', photo: '', idProof: '' });
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Geolocation State
   const [userLocation, setUserLocation] = useState<[number, number] | null>(null);
@@ -126,8 +127,8 @@ const Camps: React.FC = () => {
   const [mapMode, setMapMode] = useState<'street' | 'satellite'>('street');
   const [isMaximized, setIsMaximized] = useState(false);
 
-  // Default Center (New York for demo)
-  const defaultCenter: [number, number] = [40.75, -73.98];
+  // Default Center (Navi Mumbai)
+  const defaultCenter: [number, number] = [19.0330, 73.0297];
 
   useEffect(() => {
     const handleEsc = (e: KeyboardEvent) => {
@@ -137,83 +138,108 @@ const Camps: React.FC = () => {
     return () => window.removeEventListener('keydown', handleEsc);
   }, [isMaximized]);
 
+  const updateCampsForLocation = (lat: number, lng: number) => {
+    setUserLocation([lat, lng]);
+    
+    // Check distance to initial camps
+    const distances = INITIAL_CAMPS.map(c => calculateDistance(lat, lng, c.lat, c.lng));
+    const minDistance = Math.min(...distances);
+
+    let displayCamps = [];
+
+    // Smart Mocking: If user is > 50km away from default camps, generate local ones
+    if (minDistance > 50) {
+      const localCamps = [
+        {
+          id: 'loc_1',
+          name: 'Local Community Drive',
+          organizer: 'City Health Dept',
+          locationName: 'Civic Center nearby',
+          lat: lat + 0.005 + (Math.random() * 0.01 - 0.005),
+          lng: lng + 0.005 + (Math.random() * 0.01 - 0.005),
+          date: '2023-11-25',
+          time: '09:00 AM - 02:00 PM',
+        },
+        {
+          id: 'loc_2',
+          name: 'Corporate Park Donation',
+          organizer: 'Rotary Club',
+          locationName: 'Tech Park Block A',
+          lat: lat - 0.008 + (Math.random() * 0.01 - 0.005),
+          lng: lng - 0.003 + (Math.random() * 0.01 - 0.005),
+          date: '2023-11-28',
+          time: '10:00 AM - 05:00 PM',
+        },
+        {
+          id: 'loc_3',
+          name: 'University Camp',
+          organizer: 'NSS Unit',
+          locationName: 'University Main Hall',
+          lat: lat + 0.002 + (Math.random() * 0.01 - 0.005),
+          lng: lng - 0.01 + (Math.random() * 0.01 - 0.005),
+          date: '2023-12-01',
+          time: '09:00 AM - 04:00 PM',
+        }
+      ];
+
+      displayCamps = localCamps.map(camp => ({
+        ...camp,
+        distance: calculateDistance(lat, lng, camp.lat, camp.lng)
+      })).sort((a, b) => a.distance - b.distance);
+
+    } else {
+       // User is close to default camps, just sort them
+       displayCamps = INITIAL_CAMPS.map(camp => ({
+        ...camp,
+        distance: calculateDistance(lat, lng, camp.lat, camp.lng)
+      })).sort((a, b) => a.distance - b.distance);
+    }
+    
+    setCampsList(displayCamps);
+    setLoadingLoc(false);
+  };
+
   const fetchLocation = () => {
+    setLoadingLoc(true);
+
     if (!navigator.geolocation) {
       alert("Geolocation is not supported by your browser");
+      setLoadingLoc(false);
       return;
     }
-    setLoadingLoc(true);
-    navigator.geolocation.getCurrentPosition(
-      (position) => {
-        const { latitude, longitude } = position.coords;
-        setUserLocation([latitude, longitude]);
-        
-        // Check distance to initial camps
-        const distances = INITIAL_CAMPS.map(c => calculateDistance(latitude, longitude, c.lat, c.lng));
-        const minDistance = Math.min(...distances);
 
-        let displayCamps = [];
+    const success = (position: GeolocationPosition) => {
+      updateCampsForLocation(position.coords.latitude, position.coords.longitude);
+    };
 
-        // Smart Mocking: If user is > 100km away from default camps, generate local ones
-        if (minDistance > 100) {
-          const localCamps = [
-            {
-              id: 'loc_1',
-              name: 'Local Community Drive',
-              organizer: 'City Health Dept',
-              locationName: 'Civic Center nearby',
-              lat: latitude + 0.005 + (Math.random() * 0.01 - 0.005),
-              lng: longitude + 0.005 + (Math.random() * 0.01 - 0.005),
-              date: '2023-11-25',
-              time: '09:00 AM - 02:00 PM',
-            },
-            {
-              id: 'loc_2',
-              name: 'Corporate Park Donation',
-              organizer: 'Rotary Club',
-              locationName: 'Tech Park Block A',
-              lat: latitude - 0.008 + (Math.random() * 0.01 - 0.005),
-              lng: longitude - 0.003 + (Math.random() * 0.01 - 0.005),
-              date: '2023-11-28',
-              time: '10:00 AM - 05:00 PM',
-            },
-            {
-              id: 'loc_3',
-              name: 'University Camp',
-              organizer: 'NSS Unit',
-              locationName: 'University Main Hall',
-              lat: latitude + 0.002 + (Math.random() * 0.01 - 0.005),
-              lng: longitude - 0.01 + (Math.random() * 0.01 - 0.005),
-              date: '2023-12-01',
-              time: '09:00 AM - 04:00 PM',
+    const error = (err: GeolocationPositionError) => {
+      console.warn("GPS Error, trying IP location fallback...", err);
+      // Fallback to IP-based location API if GPS fails/denied
+      fetch('https://ipapi.co/json/')
+        .then(res => res.json())
+        .then(data => {
+            if (data.latitude && data.longitude) {
+                updateCampsForLocation(data.latitude, data.longitude);
+            } else {
+                throw new Error("IP Location failed");
             }
-          ];
+        })
+        .catch(e => {
+            console.error("Fallback location failed", e);
+            alert("Could not determine location. Please ensure GPS is enabled or try a different browser.");
+            setLoadingLoc(false);
+        });
+    };
 
-          displayCamps = localCamps.map(camp => ({
-            ...camp,
-            distance: calculateDistance(latitude, longitude, camp.lat, camp.lng)
-          })).sort((a, b) => a.distance - b.distance);
-
-        } else {
-           // User is close to default camps, just sort them
-           displayCamps = INITIAL_CAMPS.map(camp => ({
-            ...camp,
-            distance: calculateDistance(latitude, longitude, camp.lat, camp.lng)
-          })).sort((a, b) => a.distance - b.distance);
-        }
-        
-        setCampsList(displayCamps);
-        setLoadingLoc(false);
-      },
-      (error) => {
-        console.error("Location error", error);
-        setLoadingLoc(false);
-        // alert("Unable to retrieve location. Showing all camps.");
-      }
-    );
+    navigator.geolocation.getCurrentPosition(success, error, {
+        enableHighAccuracy: true,
+        timeout: 10000,
+        maximumAge: 0
+    });
   };
 
   useEffect(() => {
+    // Try to fetch location on mount
     fetchLocation();
   }, []);
 
@@ -221,12 +247,19 @@ const Camps: React.FC = () => {
     setSelectedCamp(camp);
     setRegisterOpen(true);
     setStep(1);
-    setUserData({ name: '', age: '', photo: '' });
+    setUserData({ name: '', age: '', photo: '', idProof: '' });
   };
 
   const handlePhotoCaptured = (photo: string) => {
     setUserData(prev => ({ ...prev, photo }));
     setStep(3); // Go to ticket
+  };
+
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setUserData(prev => ({ ...prev, idProof: file.name }));
+    }
   };
 
   return (
@@ -419,15 +452,27 @@ const Camps: React.FC = () => {
             />
             <div className="space-y-2">
                <label className="text-sm font-medium text-slate-700 dark:text-slate-300">ID Proof</label>
-               <div className="border-2 border-dashed border-slate-200 rounded-lg p-6 text-center hover:bg-slate-50 transition-colors cursor-pointer group">
-                  <div className="h-12 w-12 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-3 group-hover:scale-110 transition-transform">
-                    <User className="h-6 w-6 text-slate-400" />
+               <input 
+                  type="file" 
+                  ref={fileInputRef}
+                  className="hidden"
+                  accept="image/*,.pdf"
+                  onChange={handleFileSelect}
+               />
+               <div 
+                  onClick={() => fileInputRef.current?.click()}
+                  className={`border-2 border-dashed rounded-lg p-6 text-center hover:bg-slate-50 transition-colors cursor-pointer group ${userData.idProof ? 'border-green-500 bg-green-50 dark:bg-green-900/10' : 'border-slate-200'}`}
+               >
+                  <div className={`h-12 w-12 rounded-full flex items-center justify-center mx-auto mb-3 transition-transform ${userData.idProof ? 'bg-green-100 text-green-600' : 'bg-slate-100 text-slate-400 group-hover:scale-110'}`}>
+                    {userData.idProof ? <CheckCircle2 className="h-6 w-6" /> : <User className="h-6 w-6 text-slate-400" />}
                   </div>
-                  <span className="text-sm font-medium text-slate-600">Click to upload Aadhar / Pan / License</span>
+                  <span className={`text-sm font-medium ${userData.idProof ? 'text-green-700' : 'text-slate-600'}`}>
+                    {userData.idProof ? userData.idProof : "Click to upload Aadhar / Pan / License"}
+                  </span>
                   <p className="text-xs text-slate-400 mt-1">Supports JPG, PNG, PDF</p>
                </div>
             </div>
-            <Button className="w-full" size="lg" onClick={() => setStep(2)} disabled={!userData.name || !userData.age}>Next Step</Button>
+            <Button className="w-full" size="lg" onClick={() => setStep(2)} disabled={!userData.name || !userData.age || !userData.idProof}>Next Step</Button>
           </div>
         )}
 
