@@ -1,6 +1,6 @@
 
 
-import { BloodType, Resource, Camp, Donor, Request } from './types';
+import { BloodType, Resource, Camp, Donor, Request, Shipment } from './types';
 
 export const BLOOD_TYPES: BloodType[] = ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'];
 
@@ -161,7 +161,7 @@ export const INITIAL_CAMPS: Camp[] = [
     lat: 19.0200, 
     lng: 73.0180,
     date: '2023-12-05',
-    time: '11:00 AM - 07:00 PM'
+    time: '11:00 AM - 07:00 PM' 
   }
 ];
 
@@ -320,5 +320,72 @@ export const MOCK_HISTORY: Request[] = [
     postedAt: new Date(Date.now() - 1000 * 60 * 60 * 24 * 25).toISOString(), // 25 days ago
     status: 'Fulfilled',
     fulfilledBy: 'Priya Patel (Donor)'
+  }
+];
+
+// --- LOGISTICS SHIPMENTS ---
+export const INITIAL_SHIPMENTS: Shipment[] = [
+  {
+    id: 'sh-101',
+    origin: 'MGM Hospital, Vashi',
+    destination: 'D Y Patil Hospital, Nerul',
+    bloodType: 'O-',
+    units: 5,
+    status: 'In Transit',
+    method: 'Drone',
+    eta: '12 mins',
+    priority: 'Critical',
+    // Roughly somewhere between Vashi and Nerul
+    currentLat: 19.0520, 
+    currentLng: 73.0100,
+    destLat: 19.0422,
+    destLng: 73.0270
+  },
+  {
+    id: 'sh-102',
+    origin: 'Apollo Hospitals, Belapur',
+    destination: 'Sahyadri Hospital, Kharghar',
+    bloodType: 'A+',
+    units: 20,
+    status: 'In Transit',
+    method: 'Ambulance',
+    eta: '25 mins',
+    priority: 'High',
+    // On the highway near Belapur
+    currentLat: 19.0250,
+    currentLng: 73.0450,
+    destLat: 18.9910,
+    destLng: 73.1200
+  },
+  {
+    id: 'sh-103',
+    origin: 'Central Blood Bank',
+    destination: 'Fortis Hiranandani',
+    bloodType: 'AB+',
+    units: 10,
+    status: 'Scheduled',
+    method: 'Cold Storage Van',
+    eta: '14:00 PM',
+    priority: 'Normal',
+    currentLat: 19.0760,
+    currentLng: 72.9980,
+    destLat: 19.0760,
+    destLng: 72.9980
+  },
+  {
+    id: 'sh-104',
+    origin: 'Reliance Hospital',
+    destination: 'Terna Speciality',
+    bloodType: 'B-',
+    units: 2,
+    status: 'In Transit',
+    method: 'Drone',
+    eta: '8 mins',
+    priority: 'Critical',
+    // Mid-flight
+    currentLat: 19.0700,
+    currentLng: 73.0100,
+    destLat: 19.0366,
+    destLng: 73.0164
   }
 ];

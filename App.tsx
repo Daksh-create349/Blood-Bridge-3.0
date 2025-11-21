@@ -13,6 +13,7 @@ import RequestHistory from './pages/History';
 import Camps from './pages/Camps';
 import Analytics from './pages/Analytics';
 import Donors from './pages/Donors';
+import Logistics from './pages/Logistics';
 
 // --- Splash Screen Component ---
 const Splash = ({ onComplete }: { onComplete: () => void }) => {
@@ -79,6 +80,7 @@ const App: React.FC = () => {
           <Route path="/camps" element={<Camps />} />
           <Route path="/analytics" element={<Analytics />} />
           <Route path="/donors" element={<Donors />} />
+          <Route path="/logistics" element={<Logistics />} />
           <Route path="/settings" element={<MockPage title="Settings" />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>

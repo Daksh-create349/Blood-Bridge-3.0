@@ -58,3 +58,23 @@ export interface NavItem {
   path: string;
   icon: React.ReactNode;
 }
+
+// --- Logistics Types ---
+export type ShipmentStatus = 'In Transit' | 'Scheduled' | 'Delivered' | 'Delayed';
+export type TransportMethod = 'Drone' | 'Ambulance' | 'Cold Storage Van';
+
+export interface Shipment {
+  id: string;
+  origin: string;
+  destination: string;
+  bloodType: BloodType;
+  units: number;
+  status: ShipmentStatus;
+  method: TransportMethod;
+  eta: string;
+  priority: 'Normal' | 'High' | 'Critical';
+  currentLat: number;
+  currentLng: number;
+  destLat: number;
+  destLng: number;
+}

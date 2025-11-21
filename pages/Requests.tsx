@@ -338,7 +338,13 @@ export const ActiveRequests: React.FC = () => {
 
   const confirmDonation = () => {
     if (selectedRequest) {
-      const updated = requests.filter(r => r.id !== selectedRequest.id);
+      // Update status to Fulfilled instead of deleting
+      const updated = requests.map(r => 
+        r.id === selectedRequest.id 
+        ? { ...r, status: 'Fulfilled' as const, fulfilledBy: 'Volunteer Donor (You)' } 
+        : r
+      );
+      
       setRequests(updated);
       localStorage.setItem('bloodBridge_requests', JSON.stringify(updated));
       setDonateModalOpen(false);
@@ -353,6 +359,9 @@ export const ActiveRequests: React.FC = () => {
     }
   };
 
+  // Filter to only show Active requests in this view
+  const activeRequestsList = requests.filter(r => r.status === 'Active');
+
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center bg-slate-900 text-white p-6 rounded-xl shadow-lg">
@@ -365,12 +374,12 @@ export const ActiveRequests: React.FC = () => {
               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
               <span className="relative inline-flex rounded-full h-3 w-3 bg-red-500"></span>
             </div>
-           <span className="font-medium">{requests.length} Active Cases</span>
+           <span className="font-medium">{activeRequestsList.length} Active Cases</span>
         </div>
       </div>
 
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-        {requests.map(req => (
+        {activeRequestsList.map(req => (
           <Card key={req.id} className={`group border-t-4 shadow-md hover:shadow-xl transition-all duration-300 ${req.urgency === 'Critical' ? 'border-t-red-600' : 'border-t-orange-500'}`}>
             <CardContent className="p-6 relative">
               <div className="flex justify-between items-start mb-4">
@@ -409,7 +418,7 @@ export const ActiveRequests: React.FC = () => {
             </CardContent>
           </Card>
         ))}
-        {requests.length === 0 && (
+        {activeRequestsList.length === 0 && (
           <div className="col-span-full py-20 text-center text-slate-500 bg-white rounded-xl border border-dashed border-slate-300">
             <CheckCircle2 className="h-16 w-16 mx-auto mb-4 text-green-500 opacity-50" />
             <p className="text-xl font-semibold text-slate-700">All Clear!</p>

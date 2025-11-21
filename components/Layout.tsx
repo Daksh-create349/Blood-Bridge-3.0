@@ -1,4 +1,5 @@
 
+
 import React, { useState, useEffect } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
 import { 
@@ -14,7 +15,8 @@ import {
   ChevronLeft,
   HeartPulse,
   Sun,
-  Moon
+  Moon,
+  Truck
 } from 'lucide-react';
 import Chatbot from './Chatbot';
 
@@ -64,6 +66,7 @@ const Sidebar: React.FC<SidebarProps> = ({ collapsed, setCollapsed }) => {
           <NavItem to="/send-request" icon={<Send className="h-5 w-5" />} label="Send Request" collapsed={collapsed} />
           <NavItem to="/view-alerts" icon={<Bell className="h-5 w-5" />} label="Active Alerts" collapsed={collapsed} />
           <NavItem to="/request-history" icon={<History className="h-5 w-5" />} label="History" collapsed={collapsed} />
+          <NavItem to="/logistics" icon={<Truck className="h-5 w-5" />} label="Smart Logistics" collapsed={collapsed} />
           
           <div className={`mt-6 mb-2 px-3 text-xs font-semibold uppercase text-slate-500 dark:text-slate-400 ${collapsed ? 'hidden' : 'block'}`}>Community</div>
           <NavItem to="/camps" icon={<Tent className="h-5 w-5" />} label="Donation Camps" collapsed={collapsed} />
