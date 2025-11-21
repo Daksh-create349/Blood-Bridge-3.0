@@ -127,7 +127,7 @@ const Chatbot: React.FC = () => {
 
         // Send tool response back to model
         if (toolResponses.length > 0) {
-          result = await chatSessionRef.current.sendMessage(toolResponses);
+          result = await chatSessionRef.current.sendMessage({ message: toolResponses });
           response = result.candidates?.[0];
         }
       }
