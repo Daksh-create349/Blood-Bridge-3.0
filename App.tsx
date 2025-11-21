@@ -1,5 +1,4 @@
 
-
 import React, { useState, useEffect } from 'react';
 import { HashRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { HeartPulse, Droplet } from 'lucide-react';
@@ -14,6 +13,7 @@ import Camps from './pages/Camps';
 import Analytics from './pages/Analytics';
 import Donors from './pages/Donors';
 import Logistics from './pages/Logistics';
+import Settings from './pages/Settings';
 
 // --- Splash Screen Component ---
 const Splash = ({ onComplete }: { onComplete: () => void }) => {
@@ -81,7 +81,7 @@ const App: React.FC = () => {
           <Route path="/analytics" element={<Analytics />} />
           <Route path="/donors" element={<Donors />} />
           <Route path="/logistics" element={<Logistics />} />
-          <Route path="/settings" element={<MockPage title="Settings" />} />
+          <Route path="/settings" element={<Settings />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </Layout>
