@@ -6,7 +6,6 @@ export default defineConfig(({ mode }) => {
   return {
     plugins: [react()],
     define: {
-      // This prevents "process is not defined" crash in the browser
       'process.env.API_KEY': JSON.stringify(env.API_KEY),
       'process.env': {}
     },
