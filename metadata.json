@@ -1,0 +1,8 @@
+{
+  "name": "Blood Bridge",
+  "description": "An AI-powered platform to connect blood banks, hospitals, and donors to prevent critical shortages.",
+  "requestFramePermissions": [
+    "camera",
+    "geolocation"
+  ]
+}
