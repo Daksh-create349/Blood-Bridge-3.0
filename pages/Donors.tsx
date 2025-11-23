@@ -1,8 +1,9 @@
 
+
 import React, { useState } from 'react';
-import { INITIAL_DONORS, BLOOD_TYPES } from '../constants';
+import { INITIAL_DONORS, BLOOD_TYPES, LEADERBOARD_DATA } from '../constants';
 import { Card, CardContent, Input, Select, Button, Badge } from '../components/ui/UIComponents';
-import { Search, MapPin, Phone, Mail, Calendar, User, Filter } from 'lucide-react';
+import { Search, MapPin, Phone, Mail, Calendar, User, Filter, Trophy, Medal, Heart } from 'lucide-react';
 
 const Donors: React.FC = () => {
   const [search, setSearch] = useState('');
@@ -28,6 +29,55 @@ const Donors: React.FC = () => {
            <span className="font-bold text-slate-900 dark:text-white">{INITIAL_DONORS.length}</span>
            <span className="text-sm font-medium text-slate-500">Total Donors</span>
         </div>
+      </div>
+
+      {/* --- LEADERBOARD SECTION --- */}
+      <div className="grid gap-6 md:grid-cols-3 mb-8">
+        {LEADERBOARD_DATA.map((hero) => (
+           <div key={hero.rank} className="relative group">
+              <div className={`absolute -inset-0.5 rounded-2xl blur opacity-30 group-hover:opacity-75 transition duration-500 ${
+                 hero.badge === 'Gold' ? 'bg-gradient-to-r from-yellow-300 to-amber-500' :
+                 hero.badge === 'Silver' ? 'bg-gradient-to-r from-slate-300 to-slate-500' :
+                 'bg-gradient-to-r from-orange-300 to-orange-600'
+              }`}></div>
+              <div className="relative bg-white dark:bg-slate-900 rounded-xl p-6 border border-slate-100 dark:border-slate-800 h-full flex flex-col items-center text-center">
+                 <div className={`absolute top-0 right-4 -translate-y-1/2 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider text-white shadow-md ${
+                    hero.badge === 'Gold' ? 'bg-amber-500' :
+                    hero.badge === 'Silver' ? 'bg-slate-400' :
+                    'bg-orange-500'
+                 }`}>
+                    #{hero.rank} {hero.badge}
+                 </div>
+                 
+                 <div className="mb-4 relative">
+                    <div className={`h-20 w-20 rounded-full flex items-center justify-center text-3xl font-bold text-white shadow-lg ${
+                       hero.badge === 'Gold' ? 'bg-gradient-to-br from-yellow-400 to-amber-600' :
+                       hero.badge === 'Silver' ? 'bg-gradient-to-br from-slate-300 to-slate-500' :
+                       'bg-gradient-to-br from-orange-400 to-orange-700'
+                    }`}>
+                       {hero.name.charAt(0)}
+                    </div>
+                    {hero.rank === 1 && <Trophy className="absolute -bottom-2 -right-2 h-8 w-8 text-yellow-500 fill-yellow-200 drop-shadow-sm" />}
+                 </div>
+
+                 <h3 className="text-xl font-bold text-slate-900 dark:text-white mb-1">{hero.name}</h3>
+                 <Badge variant="outline" className="mb-4">{hero.bloodType}</Badge>
+
+                 <div className="grid grid-cols-2 w-full gap-2 border-t border-slate-100 dark:border-slate-800 pt-4 mt-auto">
+                    <div>
+                       <div className="text-2xl font-black text-slate-800 dark:text-slate-100">{hero.donations}</div>
+                       <div className="text-xs text-slate-400 uppercase font-semibold">Donations</div>
+                    </div>
+                    <div>
+                       <div className="text-2xl font-black text-green-600 dark:text-green-400 flex items-center justify-center gap-1">
+                          {hero.livesSaved} <Heart className="h-3 w-3 fill-current" />
+                       </div>
+                       <div className="text-xs text-slate-400 uppercase font-semibold">Lives Saved</div>
+                    </div>
+                 </div>
+              </div>
+           </div>
+        ))}
       </div>
 
       {/* Filter Bar */}

@@ -1,9 +1,10 @@
 
+
 import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, Input, Select, Button, Badge, Dialog } from '../components/ui/UIComponents';
-import { INITIAL_RESOURCES } from '../constants';
+import { INITIAL_RESOURCES, COMPATIBILITY_CHART, BLOOD_TYPES } from '../constants';
 import { Resource, Status } from '../types';
-import { AlertTriangle, RefreshCcw, Search, CheckCircle2, TrendingUp, TrendingDown, ExternalLink, Star, MapPin } from 'lucide-react';
+import { AlertTriangle, RefreshCcw, Search, CheckCircle2, TrendingUp, TrendingDown, ExternalLink, Star, MapPin, HeartHandshake, ArrowRight, Droplet } from 'lucide-react';
 import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
 import L from 'leaflet';
 
@@ -36,6 +37,10 @@ const Dashboard: React.FC = () => {
 
   // Location Map Modal State
   const [viewLocationResource, setViewLocationResource] = useState<Resource | null>(null);
+
+  // Compatibility Modal State
+  const [compModalOpen, setCompModalOpen] = useState(false);
+  const [selectedCompType, setSelectedCompType] = useState('A+');
 
   // Stats
   const criticalCount = resources.filter(r => r.units < 5).length;
@@ -87,6 +92,13 @@ const Dashboard: React.FC = () => {
 
   return (
     <div className="space-y-8">
+      {/* Header with Compatibility Button */}
+      <div className="flex justify-end">
+        <Button variant="outline" className="gap-2" onClick={() => setCompModalOpen(true)}>
+          <HeartHandshake className="h-4 w-4 text-red-500" /> Blood Compatibility Guide
+        </Button>
+      </div>
+
       {/* Summaries */}
       <div className="grid gap-6 md:grid-cols-3">
         <Card className="relative overflow-hidden border-l-4 border-l-red-500">
@@ -324,6 +336,75 @@ const Dashboard: React.FC = () => {
               )}
            </div>
         </div>
+      </Dialog>
+
+      {/* Compatibility Modal */}
+      <Dialog 
+        open={compModalOpen} 
+        onOpenChange={setCompModalOpen} 
+        title="Blood Compatibility Matrix"
+        className="max-w-2xl"
+      >
+         <div className="py-4 space-y-6">
+            <div className="flex flex-col items-center">
+               <label className="text-sm font-bold text-slate-500 uppercase tracking-widest mb-3">Select a Blood Type</label>
+               <div className="flex flex-wrap justify-center gap-2">
+                  {BLOOD_TYPES.map(type => (
+                    <button
+                      key={type}
+                      onClick={() => setSelectedCompType(type)}
+                      className={`h-12 w-12 rounded-full font-bold text-lg border-2 transition-all ${
+                        selectedCompType === type 
+                          ? 'bg-red-600 text-white border-red-600 shadow-lg scale-110' 
+                          : 'bg-white text-slate-600 border-slate-200 hover:border-red-300 dark:bg-slate-800 dark:text-slate-300 dark:border-slate-700'
+                      }`}
+                    >
+                      {type}
+                    </button>
+                  ))}
+               </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+               {/* Can Give To */}
+               <div className="bg-green-50 dark:bg-green-900/10 rounded-xl p-5 border border-green-100 dark:border-green-800 text-center">
+                  <div className="flex justify-center mb-2">
+                     <div className="h-10 w-10 bg-green-100 rounded-full flex items-center justify-center text-green-600">
+                        <ArrowRight className="h-5 w-5" />
+                     </div>
+                  </div>
+                  <h4 className="font-bold text-green-800 dark:text-green-300 mb-4">Can Donate To</h4>
+                  <div className="flex flex-wrap justify-center gap-2">
+                     {COMPATIBILITY_CHART[selectedCompType]?.give.map(t => (
+                        <span key={t} className="px-3 py-1 bg-white dark:bg-slate-900 rounded-md shadow-sm border border-green-200 dark:border-green-700 font-bold text-slate-700 dark:text-slate-200">
+                           {t}
+                        </span>
+                     ))}
+                  </div>
+               </div>
+
+               {/* Can Receive From */}
+               <div className="bg-blue-50 dark:bg-blue-900/10 rounded-xl p-5 border border-blue-100 dark:border-blue-800 text-center">
+                   <div className="flex justify-center mb-2">
+                     <div className="h-10 w-10 bg-blue-100 rounded-full flex items-center justify-center text-blue-600">
+                        <Droplet className="h-5 w-5" />
+                     </div>
+                  </div>
+                  <h4 className="font-bold text-blue-800 dark:text-blue-300 mb-4">Can Receive From</h4>
+                   <div className="flex flex-wrap justify-center gap-2">
+                     {COMPATIBILITY_CHART[selectedCompType]?.receive.map(t => (
+                        <span key={t} className="px-3 py-1 bg-white dark:bg-slate-900 rounded-md shadow-sm border border-blue-200 dark:border-blue-700 font-bold text-slate-700 dark:text-slate-200">
+                           {t}
+                        </span>
+                     ))}
+                  </div>
+               </div>
+            </div>
+            
+            <div className="text-center text-xs text-slate-400 mt-2">
+               *This chart is for reference only. Medical professionals perform cross-matching before transfusion.
+            </div>
+         </div>
       </Dialog>
     </div>
   );

@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle, Input, Select, Button, Badge,
 import { BLOOD_TYPES, INITIAL_REQUESTS, HOSPITALS, HOSPITAL_DETAILS } from '../constants';
 import { Request, UrgencyLevel } from '../types';
 import { Clock, MapPin, AlertCircle, CheckCircle2, Radio, Send as SendIcon, Phone, Navigation, Building2, LocateFixed } from 'lucide-react';
-import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
+import { MapContainer, TileLayer, Marker, Popup, useMap, Polyline } from 'react-leaflet';
 import L from 'leaflet';
 
 // Fix for Leaflet default icon issues
@@ -24,15 +24,35 @@ const markerIcon = L.icon({
   shadowSize: [41, 41]
 });
 
+const sourceIcon = L.divIcon({
+  className: 'custom-source-icon',
+  html: `<div style="background-color: #16a34a; width: 1.5rem; height: 1.5rem; border-radius: 50%; border: 2px solid white; box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);"></div>`,
+  iconSize: [24, 24],
+  iconAnchor: [12, 12]
+});
+
 // --- Helper: Map Updater to Fly to Location ---
-const MapUpdater = ({ center }: { center: [number, number] }) => {
+const MapUpdater = ({ center, zoom }: { center: [number, number], zoom?: number }) => {
   const map = useMap();
   useEffect(() => {
     if (center) {
-      map.flyTo(center, 16, { duration: 1.5 });
+      map.flyTo(center, zoom || 16, { duration: 1.5 });
     }
-  }, [center, map]);
+  }, [center, map, zoom]);
   return null;
+};
+
+// --- Helper: Calculate Distance (Haversine) ---
+const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: number) => {
+  const R = 6371; // Radius of the earth in km
+  const dLat = (lat2 - lat1) * (Math.PI / 180);
+  const dLon = (lon2 - lon1) * (Math.PI / 180);
+  const a =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos(lat1 * (Math.PI / 180)) * Math.cos(lat2 * (Math.PI / 180)) *
+    Math.sin(dLon / 2) * Math.sin(dLon / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  return R * c;
 };
 
 // --- Send Request Page ---
@@ -319,6 +339,11 @@ export const ActiveRequests: React.FC = () => {
   const [donateModalOpen, setDonateModalOpen] = useState(false);
   const [selectedRequest, setSelectedRequest] = useState<Request | null>(null);
 
+  // New States for Filtered Donation Logic
+  const [sourceHospital, setSourceHospital] = useState('');
+  const [validSources, setValidSources] = useState<{name: string, distance: number}[]>([]);
+  const [distance, setDistance] = useState<number | null>(null);
+
   // Load requests from LocalStorage on mount
   useEffect(() => {
     const stored = localStorage.getItem('bloodBridge_requests');
@@ -331,6 +356,47 @@ export const ActiveRequests: React.FC = () => {
     }
   }, []);
 
+  // When a request is selected, calculate valid nearby hospitals
+  useEffect(() => {
+    if (selectedRequest && donateModalOpen) {
+      const targetCoords = HOSPITAL_DETAILS[selectedRequest.hospitalName];
+      if (!targetCoords) {
+        setValidSources([]);
+        return;
+      }
+
+      // Parse radius (e.g. "5km" -> 5)
+      const radiusLimit = parseInt(selectedRequest.radius); 
+
+      const validList = HOSPITALS
+        .filter(h => h !== selectedRequest.hospitalName) // Cannot donate from same hospital
+        .map(h => {
+          const coords = HOSPITAL_DETAILS[h];
+          if (!coords) return null;
+          const dist = calculateDistance(targetCoords.lat, targetCoords.lng, coords.lat, coords.lng);
+          return { name: h, distance: dist };
+        })
+        .filter((item): item is {name: string, distance: number} => item !== null && item.distance <= radiusLimit)
+        .sort((a, b) => a.distance - b.distance);
+
+      setValidSources(validList);
+      setSourceHospital('');
+      setDistance(null);
+    }
+  }, [selectedRequest, donateModalOpen]);
+
+  // When source is selected, calculate final distance
+  useEffect(() => {
+    if (sourceHospital && selectedRequest) {
+      const targetCoords = HOSPITAL_DETAILS[selectedRequest.hospitalName];
+      const sourceCoords = HOSPITAL_DETAILS[sourceHospital];
+      if (targetCoords && sourceCoords) {
+        const d = calculateDistance(targetCoords.lat, targetCoords.lng, sourceCoords.lat, sourceCoords.lng);
+        setDistance(d);
+      }
+    }
+  }, [sourceHospital, selectedRequest]);
+
   const handleDonateClick = (req: Request) => {
     setSelectedRequest(req);
     setDonateModalOpen(true);
@@ -341,7 +407,11 @@ export const ActiveRequests: React.FC = () => {
       // Update status to Fulfilled instead of deleting
       const updated = requests.map(r => 
         r.id === selectedRequest.id 
-        ? { ...r, status: 'Fulfilled' as const, fulfilledBy: 'Volunteer Donor (You)' } 
+        ? { 
+            ...r, 
+            status: 'Fulfilled' as const, 
+            fulfilledBy: sourceHospital ? `Transfer from ${sourceHospital}` : 'Volunteer Donor' 
+          } 
         : r
       );
       
@@ -349,6 +419,7 @@ export const ActiveRequests: React.FC = () => {
       localStorage.setItem('bloodBridge_requests', JSON.stringify(updated));
       setDonateModalOpen(false);
       setSelectedRequest(null);
+      setSourceHospital('');
     }
   };
 
@@ -361,6 +432,10 @@ export const ActiveRequests: React.FC = () => {
 
   // Filter to only show Active requests in this view
   const activeRequestsList = requests.filter(r => r.status === 'Active');
+
+  // Map coordinates helpers for the modal
+  const reqCoords = selectedRequest ? HOSPITAL_DETAILS[selectedRequest.hospitalName] : null;
+  const srcCoords = sourceHospital ? HOSPITAL_DETAILS[sourceHospital] : null;
 
   return (
     <div className="space-y-6">
@@ -427,37 +502,96 @@ export const ActiveRequests: React.FC = () => {
         )}
       </div>
 
-      <Dialog open={donateModalOpen} onOpenChange={setDonateModalOpen} title="Confirm Donation Intent">
+      <Dialog open={donateModalOpen} onOpenChange={setDonateModalOpen} title="Confirm Donation Intent" className="max-w-2xl">
         <div className="space-y-6 pt-2">
-          <div className="bg-green-50 dark:bg-green-900/10 p-4 rounded-lg border border-green-100 dark:border-green-900 flex items-start gap-3">
-             <div className="bg-green-100 rounded-full p-1 mt-0.5"><CheckCircle2 className="h-4 w-4 text-green-700" /></div>
-             <div className="text-sm text-green-800 dark:text-green-300">
-               You are about to commit to fulfilling this request. The hospital will be notified of your arrival.
-             </div>
-          </div>
           
-          <div className="p-4 bg-slate-50 rounded-xl border border-slate-200">
-            <h4 className="font-bold text-slate-900">{selectedRequest?.hospitalName}</h4>
-            <div className="flex items-center gap-2 text-sm text-slate-500 mt-1">
-              <Navigation className="h-3 w-3" /> {selectedRequest?.location}
+          <div className="p-4 bg-slate-50 dark:bg-slate-800/50 rounded-xl border border-slate-200 dark:border-slate-700 backdrop-blur-sm">
+            <div className="flex justify-between items-start">
+              <div>
+                <div className="flex items-center gap-2 mb-1">
+                   <div className="h-2 w-2 rounded-full bg-red-500 animate-pulse"></div>
+                   <span className="text-xs text-slate-500 dark:text-slate-400 uppercase tracking-wide font-bold">Requiring Hospital</span>
+                </div>
+                <h4 className="font-bold text-slate-900 dark:text-white text-xl">{selectedRequest?.hospitalName}</h4>
+                <div className="flex items-center gap-1.5 text-sm text-slate-500 dark:text-slate-400 mt-1">
+                  <MapPin className="h-3.5 w-3.5" /> {selectedRequest?.location}
+                </div>
+              </div>
+              <Badge variant="outline" className="bg-white dark:bg-slate-900">{selectedRequest?.radius} Range</Badge>
             </div>
-            <div className="mt-3 flex gap-2">
-              <Button size="sm" variant="outline" className="h-8 text-xs"><Phone className="h-3 w-3 mr-1" /> Call Hospital</Button>
-              <Button size="sm" variant="outline" className="h-8 text-xs" onClick={handleGetDirections}><Navigation className="h-3 w-3 mr-1" /> Get Directions</Button>
+            
+            <div className="mt-4 flex gap-3">
+              <Button size="sm" variant="outline" className="h-9 text-xs flex-1" onClick={() => window.location.href = `tel:911`}>
+                <Phone className="h-3.5 w-3.5 mr-2" /> Call Hospital
+              </Button>
+              <Button size="sm" variant="outline" className="h-9 text-xs flex-1" onClick={handleGetDirections}>
+                <Navigation className="h-3.5 w-3.5 mr-2" /> Get Directions
+              </Button>
             </div>
           </div>
 
           <div className="space-y-2">
-            <label className="text-sm font-medium">Select Donor Source</label>
+            <label className="text-sm font-medium">Select Source Hospital / Blood Bank</label>
             <Select 
                options={[
-                 { value: 'me', label: 'Individual Donor (Self)' },
-                 { value: 'red_cross', label: 'Red Cross Bank (Logistics Transfer)' },
-                 { value: 'city_general', label: 'City General Reserve (Inter-hospital)' },
+                 { value: '', label: 'Select nearby facility...' },
+                 ...validSources.map(s => ({ value: s.name, label: `${s.name} (${s.distance.toFixed(1)} km)` }))
                ]}
+               value={sourceHospital}
+               onChange={(e) => setSourceHospital(e.target.value)}
             />
+            {validSources.length === 0 && (
+              <p className="text-xs text-red-500 mt-1">No other registered hospitals found within the {selectedRequest?.radius} radius.</p>
+            )}
           </div>
-          <Button className="w-full bg-green-600 hover:bg-green-700 text-white" onClick={confirmDonation}>Confirm & Notify Hospital</Button>
+
+          {sourceHospital && reqCoords && srcCoords && (
+             <div className="rounded-xl overflow-hidden border border-slate-200 h-64 relative">
+                <MapContainer 
+                    center={[reqCoords.lat, reqCoords.lng]} 
+                    zoom={13} 
+                    style={{ height: '100%', width: '100%' }}
+                    zoomControl={false}
+                >
+                    <TileLayer 
+                      attribution='Tiles &copy; Esri &mdash; Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community'
+                      url="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
+                    />
+                    <Marker position={[reqCoords.lat, reqCoords.lng]} icon={markerIcon}>
+                       <Popup>Request: {selectedRequest?.hospitalName}</Popup>
+                    </Marker>
+                    <Marker position={[srcCoords.lat, srcCoords.lng]} icon={sourceIcon}>
+                       <Popup>Source: {sourceHospital}</Popup>
+                    </Marker>
+                    <Polyline 
+                      positions={[[reqCoords.lat, reqCoords.lng], [srcCoords.lat, srcCoords.lng]]}
+                      pathOptions={{ color: '#3b82f6', dashArray: '5, 10', weight: 3 }}
+                    />
+                    <MapUpdater center={[reqCoords.lat, reqCoords.lng]} zoom={12} />
+                </MapContainer>
+                
+                {/* Overlay Text for better satellite readability */}
+                <div className="absolute bottom-4 left-1/2 -translate-x-1/2 bg-slate-900/90 backdrop-blur px-4 py-2 rounded-full shadow-lg border border-slate-700 text-sm font-bold text-white z-[400] flex items-center gap-2">
+                   <Navigation className="h-4 w-4 text-blue-400" />
+                   Distance: {distance?.toFixed(2)} km
+                </div>
+             </div>
+          )}
+
+          <div className="bg-green-50 dark:bg-green-900/10 p-4 rounded-lg border border-green-100 dark:border-green-900 flex items-start gap-3">
+             <div className="bg-green-100 rounded-full p-1 mt-0.5"><CheckCircle2 className="h-4 w-4 text-green-700" /></div>
+             <div className="text-sm text-green-800 dark:text-green-300">
+               Confirming will notify <strong>{selectedRequest?.hospitalName}</strong> of the incoming transfer from <strong>{sourceHospital || 'Selection'}</strong>.
+             </div>
+          </div>
+
+          <Button 
+            className="w-full bg-green-600 hover:bg-green-700 text-white h-12 text-lg" 
+            onClick={confirmDonation}
+            disabled={!sourceHospital}
+          >
+            Confirm & Dispatch Logistics
+          </Button>
         </div>
       </Dialog>
     </div>

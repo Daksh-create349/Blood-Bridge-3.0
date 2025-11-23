@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, PieChart, Pie, Cell, LineChart, Line, AreaChart, Area } from 'recharts';
+import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, PieChart, Pie, Cell } from 'recharts';
 import { INITIAL_RESOURCES, INITIAL_REQUESTS, BLOOD_TYPES } from '../constants';
 import { Card, CardContent, CardHeader, CardTitle, Button, Select, Badge } from '../components/ui/UIComponents';
 import { generateInventoryAnalysis, generateForecast, ForecastResult } from '../services/geminiService';
@@ -138,7 +138,7 @@ const Analytics: React.FC = () => {
             </div>
 
             {/* Result Display */}
-            <div className="lg:col-span-2 min-h-[300px] flex flex-col justify-center">
+            <div className="lg:col-span-2 min-h-[200px] flex flex-col justify-center">
                {!forecastResult && !loadingForecast && (
                  <div className="text-center text-slate-400 py-12 border-2 border-dashed border-slate-200 dark:border-slate-800 rounded-xl">
                     <BrainCircuit className="h-12 w-12 mx-auto mb-3 opacity-50" />
@@ -177,31 +177,8 @@ const Analytics: React.FC = () => {
                        </div>
                     </div>
 
-                    <div className="bg-slate-50 dark:bg-slate-800/50 p-4 rounded-xl border-l-4 border-violet-500 italic text-slate-600 dark:text-slate-300">
+                    <div className="bg-slate-50 dark:bg-slate-800/50 p-6 rounded-xl border-l-4 border-violet-500 italic text-slate-600 dark:text-slate-300 text-lg">
                        "{forecastResult.reasoning}"
-                    </div>
-
-                    <div className="h-[200px] w-full mt-4">
-                       <div className="text-xs text-slate-400 mb-2 font-mono text-center">-- PROJECTED SUPPLY TREND --</div>
-                       <ResponsiveContainer width="100%" height="100%">
-                          <AreaChart data={forecastResult.trendData.map((val, idx) => ({ index: idx, value: val }))}>
-                            <defs>
-                              <linearGradient id="colorVal" x1="0" y1="0" x2="0" y2="1">
-                                <stop offset="5%" stopColor="#8b5cf6" stopOpacity={0.3}/>
-                                <stop offset="95%" stopColor="#8b5cf6" stopOpacity={0}/>
-                              </linearGradient>
-                            </defs>
-                            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
-                            <XAxis hide />
-                            <YAxis hide domain={['auto', 'auto']} />
-                            <Tooltip 
-                              contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}
-                              formatter={(value: number) => [`${value} Units`, 'Forecast']}
-                              labelFormatter={() => ''}
-                            />
-                            <Area type="monotone" dataKey="value" stroke="#8b5cf6" strokeWidth={3} fillOpacity={1} fill="url(#colorVal)" />
-                          </AreaChart>
-                       </ResponsiveContainer>
                     </div>
                  </div>
                )}

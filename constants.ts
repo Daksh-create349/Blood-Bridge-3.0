@@ -389,3 +389,22 @@ export const INITIAL_SHIPMENTS: Shipment[] = [
     destLng: 73.0164
   }
 ];
+
+// --- DONOR LEADERBOARD MOCK DATA ---
+export const LEADERBOARD_DATA = [
+  { rank: 1, name: "Arjun Singh", bloodType: "O-", donations: 42, livesSaved: 126, badge: "Gold" },
+  { rank: 2, name: "Sneha Reddy", bloodType: "A+", donations: 35, livesSaved: 105, badge: "Silver" },
+  { rank: 3, name: "Rahul Deshmukh", bloodType: "B+", donations: 28, livesSaved: 84, badge: "Bronze" }
+];
+
+// --- BLOOD COMPATIBILITY CHART ---
+export const COMPATIBILITY_CHART: Record<string, { give: string[], receive: string[] }> = {
+  'O-': { give: ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'], receive: ['O-'] },
+  'O+': { give: ['A+', 'B+', 'AB+', 'O+'], receive: ['O+', 'O-'] },
+  'A-': { give: ['A+', 'A-', 'AB+', 'AB-'], receive: ['A-', 'O-'] },
+  'A+': { give: ['A+', 'AB+'], receive: ['A+', 'A-', 'O+', 'O-'] },
+  'B-': { give: ['B+', 'B-', 'AB+', 'AB-'], receive: ['B-', 'O-'] },
+  'B+': { give: ['B+', 'AB+'], receive: ['B+', 'B-', 'O+', 'O-'] },
+  'AB-': { give: ['AB+', 'AB-'], receive: ['AB-', 'A-', 'B-', 'O-'] },
+  'AB+': { give: ['AB+'], receive: ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'] }
+};

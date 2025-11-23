@@ -53,7 +53,6 @@ export const generateInventoryAnalysis = async (resources: Resource[], requests:
 export interface ForecastResult {
   riskLevel: 'Low' | 'Moderate' | 'High' | 'Critical';
   reasoning: string;
-  trendData: number[];
 }
 
 export const generateForecast = async (
@@ -77,7 +76,6 @@ export const generateForecast = async (
       Return a JSON object with:
       1. riskLevel: 'Low', 'Moderate', 'High', or 'Critical'.
       2. reasoning: A concise professional explanation (max 2 sentences) citing reasons like high demand, shelf life, or seasonal impact.
-      3. trendData: An array of 7 numbers representing the projected unit count over the time period (simulating a graph trend).
     `;
 
     const response = await ai.models.generateContent({
@@ -89,13 +87,9 @@ export const generateForecast = async (
           type: Type.OBJECT,
           properties: {
             riskLevel: { type: Type.STRING, enum: ['Low', 'Moderate', 'High', 'Critical'] },
-            reasoning: { type: Type.STRING },
-            trendData: { 
-              type: Type.ARRAY, 
-              items: { type: Type.NUMBER } 
-            }
+            reasoning: { type: Type.STRING }
           },
-          required: ['riskLevel', 'reasoning', 'trendData']
+          required: ['riskLevel', 'reasoning']
         }
       }
     });
