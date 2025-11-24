@@ -1,7 +1,6 @@
-
 import React, { useState, useEffect } from 'react';
 import { HashRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
-import { HeartPulse, Droplet } from 'lucide-react';
+import { HeartPulse } from 'lucide-react';
 
 import { Layout } from './components/Layout';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
