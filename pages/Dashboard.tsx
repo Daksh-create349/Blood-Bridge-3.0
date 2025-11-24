@@ -1,10 +1,9 @@
-
-
 import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, Input, Select, Button, Badge, Dialog } from '../components/ui/UIComponents';
 import { INITIAL_RESOURCES, COMPATIBILITY_CHART, BLOOD_TYPES } from '../constants';
 import { Resource, Status } from '../types';
-import { AlertTriangle, RefreshCcw, Search, CheckCircle2, TrendingUp, TrendingDown, ExternalLink, Star, MapPin, HeartHandshake, ArrowRight, Droplet } from 'lucide-react';
+import { useAuth } from '../contexts/AuthContext';
+import { AlertTriangle, RefreshCcw, Search, CheckCircle2, TrendingUp, TrendingDown, ExternalLink, Star, MapPin, HeartHandshake, ArrowRight, Droplet, Lock } from 'lucide-react';
 import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
 import L from 'leaflet';
 
@@ -25,24 +24,21 @@ const hospitalIcon = L.icon({
 });
 
 const Dashboard: React.FC = () => {
+  const { user } = useAuth();
   const [resources, setResources] = useState<Resource[]>(INITIAL_RESOURCES);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('All');
   
-  // Update Modal State
   const [selectedResource, setSelectedResource] = useState<Resource | null>(null);
   const [newUnits, setNewUnits] = useState('');
-  const [isAdmin, setIsAdmin] = useState(false);
-  const [password, setPassword] = useState('');
-
-  // Location Map Modal State
+  
   const [viewLocationResource, setViewLocationResource] = useState<Resource | null>(null);
-
-  // Compatibility Modal State
   const [compModalOpen, setCompModalOpen] = useState(false);
   const [selectedCompType, setSelectedCompType] = useState('A+');
+  
+  // Permission Error Modal
+  const [permissionError, setPermissionError] = useState(false);
 
-  // Stats
   const criticalCount = resources.filter(r => r.units < 5).length;
   const lowCount = resources.filter(r => r.units >= 5 && r.units < 10).length;
   const healthyCount = resources.filter(r => r.units >= 10).length;
@@ -62,18 +58,17 @@ const Dashboard: React.FC = () => {
   });
 
   const handleUpdateClick = (resource: Resource) => {
+    // Check Role
+    if (user?.role !== 'admin' && user?.role !== 'hospital') {
+      setPermissionError(true);
+      return;
+    }
+    
+    // Additional check for Hospital: Can they only edit their own?
+    // For this mock, we let them edit all for ease of demo, or could restrict by name match
+    
     setSelectedResource(resource);
     setNewUnits(resource.units.toString());
-    setIsAdmin(false);
-    setPassword('');
-  };
-
-  const handleAdminAuth = () => {
-    if (password === 'admin') {
-      setIsAdmin(true);
-    } else {
-      alert("Invalid password (use 'admin')");
-    }
   };
 
   const handleSaveUpdate = () => {
@@ -85,21 +80,18 @@ const Dashboard: React.FC = () => {
 
   const handleGetDirections = () => {
     if (viewLocationResource) {
-      // Open Google Maps in a new tab with the destination set to the resource's coordinates
       window.open(`https://www.google.com/maps/dir/?api=1&destination=${viewLocationResource.lat},${viewLocationResource.lng}`, '_blank');
     }
   };
 
   return (
     <div className="space-y-8">
-      {/* Header with Compatibility Button */}
       <div className="flex justify-end">
         <Button variant="outline" className="gap-2" onClick={() => setCompModalOpen(true)}>
           <HeartHandshake className="h-4 w-4 text-red-500" /> Blood Compatibility Guide
         </Button>
       </div>
 
-      {/* Summaries */}
       <div className="grid gap-6 md:grid-cols-3">
         <Card className="relative overflow-hidden border-l-4 border-l-red-500">
           <div className="absolute right-0 top-0 p-6 opacity-5">
@@ -150,7 +142,6 @@ const Dashboard: React.FC = () => {
         </Card>
       </div>
 
-      {/* Filters */}
       <div className="flex flex-col sm:flex-row gap-4 items-end sm:items-center justify-between bg-white p-4 rounded-xl shadow-sm border border-slate-200 dark:bg-slate-900 dark:border-slate-800">
         <div className="flex flex-col sm:flex-row gap-4 w-full lg:w-auto">
           <div className="relative w-full sm:w-80">
@@ -181,13 +172,12 @@ const Dashboard: React.FC = () => {
         </div>
       </div>
 
-      {/* Grid */}
       <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
         {filteredResources.map(resource => {
            const status = getStatus(resource.units);
            const badgeVariant = status === 'Critical' ? 'destructive' : status === 'Low' ? 'warning' : 'success';
            const progressColor = status === 'Critical' ? 'bg-red-500' : status === 'Low' ? 'bg-amber-500' : 'bg-green-500';
-           const maxUnits = 30; // assumption for progress bar
+           const maxUnits = 30; 
            const percentage = Math.min((resource.units / maxUnits) * 100, 100);
            
            return (
@@ -245,47 +235,40 @@ const Dashboard: React.FC = () => {
         })}
       </div>
 
-      {/* Inventory Update Modal */}
-      <Dialog open={!!selectedResource} onOpenChange={(v) => !v && setSelectedResource(null)} title="Update Inventory">
-         {!isAdmin ? (
-           <div className="space-y-4 py-2">
-             <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg flex gap-3">
-               <AlertTriangle className="h-5 w-5 text-amber-600 shrink-0" />
-               <p className="text-sm text-amber-800">Administrative access required for <strong>{selectedResource?.location}</strong>.</p>
-             </div>
-             <Input 
-                type="password" 
-                label="Admin Password"
-                placeholder="Enter password (hint: admin)" 
-                value={password} 
-                onChange={e => setPassword(e.target.value)}
-             />
-             <Button className="w-full" onClick={handleAdminAuth}>Verify Identity</Button>
+      <Dialog open={permissionError} onOpenChange={setPermissionError} title="Access Denied">
+        <div className="py-4 text-center space-y-4">
+           <div className="h-16 w-16 bg-red-100 rounded-full flex items-center justify-center mx-auto text-red-600">
+              <Lock className="h-8 w-8" />
            </div>
-         ) : (
-           <div className="space-y-6 py-2">
-              <div className="flex items-center gap-4 p-4 bg-slate-50 dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700">
-                 <div className="h-12 w-12 rounded-full bg-primary-100 flex items-center justify-center text-primary-700 font-bold text-xl">
-                   {selectedResource?.bloodType}
-                 </div>
-                 <div>
-                   <h4 className="font-bold text-slate-900 dark:text-slate-100">{selectedResource?.hospital}</h4>
-                   <p className="text-sm text-slate-500">Current Stock: {selectedResource?.units} Units</p>
-                 </div>
-              </div>
-              <Input 
-                 type="number" 
-                 label="New Quantity (Units)" 
-                 value={newUnits}
-                 onChange={e => setNewUnits(e.target.value)}
-                 className="text-lg font-medium"
-              />
-              <Button className="w-full" size="lg" onClick={handleSaveUpdate}>Save Changes</Button>
-           </div>
-         )}
+           <p className="text-slate-600 dark:text-slate-300">
+             You do not have administrative privileges to modify inventory. Only verified <strong>Hospital Admins</strong> can update stock.
+           </p>
+           <Button className="w-full" onClick={() => setPermissionError(false)}>Understood</Button>
+        </div>
       </Dialog>
 
-      {/* Satellite Map View Modal */}
+      <Dialog open={!!selectedResource} onOpenChange={(v) => !v && setSelectedResource(null)} title="Update Inventory">
+         <div className="space-y-6 py-2">
+            <div className="flex items-center gap-4 p-4 bg-slate-50 dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700">
+               <div className="h-12 w-12 rounded-full bg-primary-100 flex items-center justify-center text-primary-700 font-bold text-xl">
+                 {selectedResource?.bloodType}
+               </div>
+               <div>
+                 <h4 className="font-bold text-slate-900 dark:text-slate-100">{selectedResource?.hospital}</h4>
+                 <p className="text-sm text-slate-500">Current Stock: {selectedResource?.units} Units</p>
+               </div>
+            </div>
+            <Input 
+               type="number" 
+               label="New Quantity (Units)" 
+               value={newUnits}
+               onChange={e => setNewUnits(e.target.value)}
+               className="text-lg font-medium"
+            />
+            <Button className="w-full" size="lg" onClick={handleSaveUpdate}>Save Changes</Button>
+         </div>
+      </Dialog>
+
       <Dialog 
         open={!!viewLocationResource} 
         onOpenChange={(v) => !v && setViewLocationResource(null)} 
@@ -338,7 +321,6 @@ const Dashboard: React.FC = () => {
         </div>
       </Dialog>
 
-      {/* Compatibility Modal */}
       <Dialog 
         open={compModalOpen} 
         onOpenChange={setCompModalOpen} 
@@ -366,7 +348,6 @@ const Dashboard: React.FC = () => {
             </div>
 
             <div className="grid grid-cols-2 gap-4">
-               {/* Can Give To */}
                <div className="bg-green-50 dark:bg-green-900/10 rounded-xl p-5 border border-green-100 dark:border-green-800 text-center">
                   <div className="flex justify-center mb-2">
                      <div className="h-10 w-10 bg-green-100 rounded-full flex items-center justify-center text-green-600">
@@ -383,7 +364,6 @@ const Dashboard: React.FC = () => {
                   </div>
                </div>
 
-               {/* Can Receive From */}
                <div className="bg-blue-50 dark:bg-blue-900/10 rounded-xl p-5 border border-blue-100 dark:border-blue-800 text-center">
                    <div className="flex justify-center mb-2">
                      <div className="h-10 w-10 bg-blue-100 rounded-full flex items-center justify-center text-blue-600">

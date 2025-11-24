@@ -77,6 +77,23 @@ export const Input: React.FC<InputProps> = ({ label, error, className = '', ...p
   </div>
 );
 
+// --- Textarea (Enhanced Glassmorphism) ---
+interface TextareaProps extends React.TextareaHTMLAttributes<HTMLTextAreaElement> {
+  label?: string;
+  error?: string;
+}
+
+export const Textarea: React.FC<TextareaProps> = ({ label, error, className = '', ...props }) => (
+  <div className="flex flex-col gap-2 w-full">
+    {label && <label className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 text-slate-700 dark:text-slate-300">{label}</label>}
+    <textarea
+      className={`flex min-h-[80px] w-full rounded-lg border border-slate-200/50 bg-white/30 backdrop-blur-md px-3 py-2 text-sm ring-offset-transparent placeholder:text-slate-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 dark:border-slate-800/50 dark:bg-slate-900/30 dark:placeholder:text-slate-500 transition-all hover:bg-white/50 dark:hover:bg-slate-900/50 ${className}`}
+      {...props}
+    />
+    {error && <span className="text-xs text-red-500">{error}</span>}
+  </div>
+);
+
 // --- Select (Enhanced Glassmorphism) ---
 interface SelectProps extends React.SelectHTMLAttributes<HTMLSelectElement> {
   label?: string;

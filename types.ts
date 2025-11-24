@@ -78,3 +78,21 @@ export interface Shipment {
   destLat: number;
   destLng: number;
 }
+
+// --- AUTH TYPES ---
+export type UserRole = 'admin' | 'donor' | 'hospital';
+
+export interface User {
+  id: string;
+  name: string;
+  email: string; // Or identifier for hospital
+  role: UserRole;
+  avatar?: string;
+}
+
+export interface AuthContextType {
+  user: User | null;
+  isAuthenticated: boolean;
+  login: (name: string, identifier: string, role: UserRole) => void;
+  logout: () => void;
+}
