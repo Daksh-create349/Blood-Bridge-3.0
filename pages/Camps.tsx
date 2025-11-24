@@ -118,7 +118,6 @@ const Camps: React.FC = () => {
   const [step, setStep] = useState(1);
   const [selectedCamp, setSelectedCamp] = useState<typeof INITIAL_CAMPS[0] | null>(null);
   const [userData, setUserData] = useState({ name: '', age: '', photo: '', idProof: '' });
-  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Geolocation State
   const [userLocation, setUserLocation] = useState<[number, number] | null>(null);
@@ -260,6 +259,8 @@ const Camps: React.FC = () => {
     if (file) {
       setUserData(prev => ({ ...prev, idProof: file.name }));
     }
+    // Reset value to allow re-selection if needed
+    e.target.value = '';
   };
 
   return (
@@ -453,15 +454,15 @@ const Camps: React.FC = () => {
             <div className="space-y-2">
                <label className="text-sm font-medium text-slate-700 dark:text-slate-300">ID Proof</label>
                <input 
+                  id="id-proof-upload"
                   type="file" 
-                  ref={fileInputRef}
                   className="hidden"
                   accept="image/*,.pdf"
                   onChange={handleFileSelect}
                />
-               <div 
-                  onClick={() => fileInputRef.current?.click()}
-                  className={`border-2 border-dashed rounded-lg p-6 text-center hover:bg-slate-50 transition-colors cursor-pointer group ${userData.idProof ? 'border-green-500 bg-green-50 dark:bg-green-900/10' : 'border-slate-200'}`}
+               <label 
+                  htmlFor="id-proof-upload"
+                  className={`border-2 border-dashed rounded-lg p-6 text-center hover:bg-slate-50 transition-colors cursor-pointer group block w-full ${userData.idProof ? 'border-green-500 bg-green-50 dark:bg-green-900/10' : 'border-slate-200'}`}
                >
                   <div className={`h-12 w-12 rounded-full flex items-center justify-center mx-auto mb-3 transition-transform ${userData.idProof ? 'bg-green-100 text-green-600' : 'bg-slate-100 text-slate-400 group-hover:scale-110'}`}>
                     {userData.idProof ? <CheckCircle2 className="h-6 w-6" /> : <User className="h-6 w-6 text-slate-400" />}
@@ -470,7 +471,7 @@ const Camps: React.FC = () => {
                     {userData.idProof ? userData.idProof : "Click to upload Aadhar / Pan / License"}
                   </span>
                   <p className="text-xs text-slate-400 mt-1">Supports JPG, PNG, PDF</p>
-               </div>
+               </label>
             </div>
             <Button className="w-full" size="lg" onClick={() => setStep(2)} disabled={!userData.name || !userData.age || !userData.idProof}>Next Step</Button>
           </div>
