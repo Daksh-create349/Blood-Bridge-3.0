@@ -23,15 +23,17 @@ const Contact: React.FC = () => {
     setStatus('idle');
 
     try {
-      const serviceId = process.env.VITE_EMAILJS_SERVICE_ID;
-      const templateId = process.env.VITE_EMAILJS_TEMPLATE_ID;
-      const publicKey = process.env.VITE_EMAILJS_PUBLIC_KEY;
+      // Directly using the provided EmailJS credentials
+      const serviceId = "service_0qd96re";
+      const templateId = "template_elvmzi";
+      const publicKey = "sQLEAGaWbZVp079Gx";
 
       if (!serviceId || !templateId || !publicKey) {
-        throw new Error("EmailJS Configuration Missing");
+        throw new Error("EmailJS Configuration Missing.");
       }
 
       // Prepare the parameters exactly as they appear in the EmailJS template
+      // Ensure your EmailJS template variables match these keys (e.g. {{name}}, {{message}})
       const templateParams = {
         name: formData.name,
         email: formData.email,
@@ -44,8 +46,11 @@ const Contact: React.FC = () => {
       
       setStatus('success');
       setFormData({ ...formData, title: '', message: '' }); // Clear message/title but keep name/email
-    } catch (error) {
+    } catch (error: any) {
       console.error("Failed to send message:", error);
+      if (error.text) {
+          console.error("EmailJS Error Details:", error.text);
+      }
       setStatus('error');
     } finally {
       setIsLoading(false);
@@ -143,7 +148,7 @@ const Contact: React.FC = () => {
                     {status === 'error' && (
                        <div className="p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg flex items-center gap-2 text-sm text-red-600 dark:text-red-400">
                           <AlertCircle className="h-4 w-4" />
-                          Failed to send message. Please try again later.
+                          Failed to send message. Please check the browser console (F12) for details.
                        </div>
                     )}
 
