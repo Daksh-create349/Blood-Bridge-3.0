@@ -1,10 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { HashRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
-import { HeartPulse, Droplet } from 'lucide-react';
+import { HeartPulse } from 'lucide-react';
 
 import { Layout } from './components/Layout';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
-import { CustomCursor } from './components/ui/CustomCursor';
 
 import Landing from './pages/Landing';
 import Login from './pages/Login';
@@ -89,7 +88,6 @@ const App: React.FC = () => {
 
   return (
     <AuthProvider>
-      <CustomCursor />
       <HashRouter>
         <Layout>
           <AppRoutes />

@@ -1,4 +1,3 @@
-
 import React, { useState, useRef, useEffect } from 'react';
 import { MapContainer, TileLayer, Marker, Popup, useMap, LayersControl } from 'react-leaflet';
 import { INITIAL_CAMPS } from '../constants';
@@ -212,20 +211,28 @@ const Camps: React.FC = () => {
     };
 
     const error = (err: GeolocationPositionError) => {
-      console.warn("GPS Error, trying IP location fallback...", err);
+      console.warn("GPS Error, trying IP location fallback...", err.message);
       // Fallback to IP-based location API if GPS fails/denied
       fetch('https://ipapi.co/json/')
-        .then(res => res.json())
+        .then(res => {
+            if (!res.ok) throw new Error("IP Service unavailable");
+            return res.json();
+        })
         .then(data => {
             if (data.latitude && data.longitude) {
                 updateCampsForLocation(data.latitude, data.longitude);
             } else {
-                throw new Error("IP Location failed");
+                throw new Error("IP Location data incomplete");
             }
         })
         .catch(e => {
             console.error("Fallback location failed", e);
-            alert("Could not determine location. Please ensure GPS is enabled or try a different browser.");
+            let errMsg = "Unknown error";
+            if (e instanceof Error) errMsg = e.message;
+            else if (typeof e === 'string') errMsg = e;
+            else if (typeof e === 'object') errMsg = "Connection failed";
+            
+            alert(`Could not determine location: ${errMsg}. Please ensure GPS is enabled.`);
             setLoadingLoc(false);
         });
     };

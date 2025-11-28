@@ -1,5 +1,4 @@
-
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { 
@@ -21,46 +20,6 @@ import {
   MessageCircle
 } from 'lucide-react';
 import Chatbot from './Chatbot';
-
-// --- APP TOUR SCRIPT DATA ---
-const TOUR_STEPS = [
-  {
-    path: '/settings',
-    text: "Welcome to Blood Bridge. This platform was built to save lives at the speed of data. Let me take you on a journey through our ecosystem."
-  },
-  {
-    path: '/dashboard',
-    text: "First, the Dashboard. This is your command center. It provides a real-time view of blood inventory levels across the network. You can monitor critical shortages and update stock units instantly."
-  },
-  {
-    path: '/send-request',
-    text: "Next, the Operations Center. Hospitals use this page to broadcast urgent SOS alerts. These alerts trigger push notifications to donors within a specific radius."
-  },
-  {
-    path: '/view-alerts',
-    text: "Here in Active Alerts, donors receive those SOS requests. They can accept them and get instant navigation details to the requiring hospital."
-  },
-  {
-    path: '/camps',
-    text: "For community engagement, we have Donation Camps. This allows users to locate nearby blood drives, register digitally, and generate participation passes."
-  },
-  {
-    path: '/logistics',
-    text: "This is Smart Logistics. A control tower view tracking ambulances and drones in real-time as they transport life-saving supplies."
-  },
-  {
-    path: '/analytics',
-    text: "Our Intelligence layer uses Google's Gemini AI to provide inventory analytics and predictive supply forecasting, helping us prevent shortages before they happen."
-  },
-  {
-    path: '/contact',
-    text: "If you have any questions or feedback, use the Contact Us page to reach out directly to the developers."
-  },
-  {
-    path: '/settings',
-    text: "And finally, we return to Settings. Here we ensure a verified trust protocol where every donor and hospital is authenticated. Blood Bridge is not just an app. It is a lifeline. Thank you."
-  }
-];
 
 interface SidebarProps {
   collapsed: boolean;
@@ -139,63 +98,6 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
   const navigate = useNavigate();
   const { user, logout } = useAuth();
   
-  // --- TOUR LOGIC ---
-  const [tourIndex, setTourIndex] = useState(-1);
-  const tourIndexRef = useRef(-1);
-
-  useEffect(() => {
-    const handleStartTour = () => {
-      window.speechSynthesis.cancel();
-      setTourIndex(0);
-      tourIndexRef.current = 0;
-      processTourStep(0);
-    };
-
-    const handleStopTour = () => {
-      window.speechSynthesis.cancel();
-      setTourIndex(-1);
-      tourIndexRef.current = -1;
-    };
-
-    window.addEventListener('start-app-tour', handleStartTour);
-    window.addEventListener('stop-app-tour', handleStopTour);
-
-    return () => {
-      window.removeEventListener('start-app-tour', handleStartTour);
-      window.removeEventListener('stop-app-tour', handleStopTour);
-      window.speechSynthesis.cancel();
-    };
-  }, []);
-
-  const processTourStep = (index: number) => {
-    if (index >= TOUR_STEPS.length) {
-      setTourIndex(-1);
-      tourIndexRef.current = -1;
-      return;
-    }
-
-    const step = TOUR_STEPS[index];
-    navigate(step.path);
-
-    const utterance = new SpeechSynthesisUtterance(step.text);
-    utterance.rate = 0.95;
-    
-    const voices = window.speechSynthesis.getVoices();
-    const preferredVoice = voices.find(v => v.lang.includes('en-US') && v.name.includes('Google')) || voices[0];
-    if (preferredVoice) utterance.voice = preferredVoice;
-
-    utterance.onend = () => {
-      if (tourIndexRef.current !== -1) {
-        const nextIndex = index + 1;
-        setTourIndex(nextIndex);
-        tourIndexRef.current = nextIndex;
-        setTimeout(() => processTourStep(nextIndex), 800);
-      }
-    };
-
-    window.speechSynthesis.speak(utterance);
-  };
-
   // Theme Toggle Logic
   useEffect(() => {
     if (isDark) {
@@ -247,13 +149,6 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
              </span>
            </div>
            <div className="ml-auto flex items-center gap-4">
-              {tourIndex !== -1 && (
-                <div className="flex items-center gap-2 bg-indigo-600 text-white px-3 py-1 rounded-full text-xs font-bold animate-pulse">
-                   <div className="h-2 w-2 bg-white rounded-full"></div>
-                   Narrator Active
-                </div>
-              )}
-              
               <button 
                 onClick={() => setIsDark(!isDark)}
                 className="rounded-full p-2 text-slate-500 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800 transition-colors"
