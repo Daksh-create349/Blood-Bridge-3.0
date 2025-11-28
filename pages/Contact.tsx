@@ -24,16 +24,16 @@ const Contact: React.FC = () => {
     setErrorMessage('');
 
     try {
-      // Hardcoded credentials as requested, with trim() to ensure no copy-paste whitespace issues
-      const serviceId = "service_0qd96re".trim();
-      const templateId = "template_elvmzi".trim();
-      const publicKey = "sQLEAGaWbZVp079Gx".trim();
-
-      console.log("Attempting to send email with:", { serviceId, templateId, publicKey: "HIDDEN" });
+      // Hardcoded credentials as strictly requested by the user
+      const serviceId = "service_0qd96re";
+      const templateId = "template_elvmzi";
+      const publicKey = "sQLEAGaWbZVp079Gx";
 
       if (!serviceId || !templateId || !publicKey) {
         throw new Error("EmailJS Configuration Missing (Empty Keys).");
       }
+
+      console.log(`Sending email... Service: ${serviceId}, Template: ${templateId}`);
 
       // Prepare the parameters
       const templateParams = {
@@ -44,6 +44,7 @@ const Contact: React.FC = () => {
         time: new Date().toLocaleString()
       };
 
+      // Send the email, passing the public key explicitly as the 4th argument
       await emailjs.send(serviceId, templateId, templateParams, publicKey);
       
       setStatus('success');
@@ -55,12 +56,16 @@ const Contact: React.FC = () => {
       if (error.text) {
           console.error("EmailJS Error Details:", error.text);
           if (error.text.includes("template ID not found")) {
-             msg = `Error: Template ID '${"template_elvmzi"}' not found. Please verify it in your EmailJS dashboard.`;
+             msg = `Configuration Error: Template ID 'template_elvmzi' not found. Please verify it in your EmailJS dashboard.`;
           } else if (error.text.includes("service ID not found")) {
-             msg = `Error: Service ID '${"service_0qd96re"}' not found. Please verify it in your EmailJS dashboard.`;
+             msg = `Configuration Error: Service ID 'service_0qd96re' not found. Please verify it in your EmailJS dashboard.`;
+          } else if (error.text.includes("user ID not found") || error.text.includes("public key")) {
+              msg = `Configuration Error: Invalid Public Key 'sQLEAGaWbZVp079Gx'. Authentication failed.`;
           } else {
              msg = `Error: ${error.text}`;
           }
+      } else if (error.message) {
+          msg = error.message;
       }
       setErrorMessage(msg);
       setStatus('error');
@@ -158,11 +163,11 @@ const Contact: React.FC = () => {
                     />
 
                     {status === 'error' && (
-                       <div className="p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg flex items-start gap-2 text-sm text-red-600 dark:text-red-400">
-                          <AlertCircle className="h-4 w-4 mt-0.5 shrink-0" />
-                          <div>
-                            <p className="font-bold">Message failed to send.</p>
-                            <p className="opacity-90 text-xs mt-1">{errorMessage || "Check the browser console (F12) for more details."}</p>
+                       <div className="p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg flex items-start gap-3 text-sm text-red-600 dark:text-red-400">
+                          <AlertCircle className="h-5 w-5 mt-0.5 shrink-0" />
+                          <div className="flex-1">
+                            <p className="font-bold">Message failed to send</p>
+                            <p className="opacity-90 mt-1">{errorMessage}</p>
                           </div>
                        </div>
                     )}
