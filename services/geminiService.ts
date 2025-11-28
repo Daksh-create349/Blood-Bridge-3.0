@@ -188,7 +188,7 @@ export const runAutonomousLogisticsAgent = async (
       contents: prompt,
       config: {
         tools: [{ functionDeclarations: [dispatchTool] }],
-        toolConfig: { functionCallingConfig: { mode: "AUTO" } }
+        // Removed toolConfig to allow default AUTO mode and fix type error
       }
     });
 
