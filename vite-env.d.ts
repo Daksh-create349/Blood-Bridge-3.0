@@ -1,3 +1,5 @@
+// Removed reference to vite/client as it is causing resolution errors.
+
 interface ImportMetaEnv {
   readonly VITE_EMAILJS_SERVICE_ID: string
   readonly VITE_EMAILJS_TEMPLATE_ID: string
