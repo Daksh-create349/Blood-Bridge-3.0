@@ -24,9 +24,9 @@ const Contact: React.FC = () => {
     setErrorMessage('');
 
     try {
-      // Hardcoded credentials as strictly requested by the user
+      // Hardcoded credentials with the corrected Template ID
       const serviceId = "service_0qd96re";
-      const templateId = "template_elvmzi";
+      const templateId = "template_elvmz7i";
       const publicKey = "sQLEAGaWbZVp079Gx";
 
       if (!serviceId || !templateId || !publicKey) {
@@ -56,7 +56,7 @@ const Contact: React.FC = () => {
       if (error.text) {
           console.error("EmailJS Error Details:", error.text);
           if (error.text.includes("template ID not found")) {
-             msg = `Configuration Error: Template ID 'template_elvmzi' not found. Please verify it in your EmailJS dashboard.`;
+             msg = `Configuration Error: Template ID 'template_elvmz7i' not found. Please verify it in your EmailJS dashboard.`;
           } else if (error.text.includes("service ID not found")) {
              msg = `Configuration Error: Service ID 'service_0qd96re' not found. Please verify it in your EmailJS dashboard.`;
           } else if (error.text.includes("user ID not found") || error.text.includes("public key")) {
