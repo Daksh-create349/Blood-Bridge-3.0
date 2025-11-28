@@ -1,8 +1,9 @@
-
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, Badge, Button } from '../components/ui/UIComponents';
-import { INITIAL_SHIPMENTS } from '../constants';
-import { Truck, Plane, Navigation, AlertTriangle, CheckCircle2, Crosshair } from 'lucide-react';
+import { INITIAL_SHIPMENTS, INITIAL_REQUESTS, INITIAL_RESOURCES, HOSPITAL_DETAILS } from '../constants';
+import { Shipment, AgentLog } from '../types';
+import { runAutonomousLogisticsAgent } from '../services/geminiService';
+import { Truck, Plane, Navigation, AlertTriangle, CheckCircle2, Crosshair, Bot, Zap, Terminal, Activity } from 'lucide-react';
 import { MapContainer, TileLayer, Marker, Popup, Polyline, useMap } from 'react-leaflet';
 import L from 'leaflet';
 
@@ -63,9 +64,22 @@ const RecenterMap = ({ lat, lng }: { lat: number, lng: number }) => {
 };
 
 const Logistics: React.FC = () => {
-  const [shipments, setShipments] = useState(INITIAL_SHIPMENTS);
+  const [shipments, setShipments] = useState<Shipment[]>(INITIAL_SHIPMENTS);
   const [userLocation, setUserLocation] = useState<[number, number] | null>(null);
   const [loadingLoc, setLoadingLoc] = useState(false);
+  
+  // Agent State
+  const [isAutopilot, setIsAutopilot] = useState(false);
+  const [agentLogs, setAgentLogs] = useState<AgentLog[]>([]);
+  const logContainerRef = useRef<HTMLDivElement>(null);
+  const processingRef = useRef(false);
+
+  // Scroll logs to bottom
+  useEffect(() => {
+    if (logContainerRef.current) {
+      logContainerRef.current.scrollTop = logContainerRef.current.scrollHeight;
+    }
+  }, [agentLogs]);
 
   // 1. Fetch User Location
   useEffect(() => {
@@ -78,7 +92,6 @@ const Logistics: React.FC = () => {
         },
         (error) => {
           console.error("Error fetching location", error);
-          // Fallback to Navi Mumbai center if fail
           setUserLocation([19.0330, 73.0297]);
           setLoadingLoc(false);
         }
@@ -86,30 +99,21 @@ const Logistics: React.FC = () => {
     }
   }, []);
 
-  // 2. Simulation Loop (2 Minute Delivery)
+  // 2. Simulation Loop (Vehicle Movement)
   useEffect(() => {
     const interval = setInterval(() => {
       setShipments(prevShipments => {
         return prevShipments.map(shipment => {
-          // Only move active shipments
           if (shipment.status !== 'In Transit') return shipment;
 
-          // Distance check
           const distLat = Math.abs(shipment.destLat - shipment.currentLat);
           const distLng = Math.abs(shipment.destLng - shipment.currentLng);
 
-          // Threshold to consider "Arrived" (approx 50 meters)
           if (distLat < 0.0005 && distLng < 0.0005) {
              return { ...shipment, status: 'Delivered', eta: 'Arrived' };
           }
 
-          // Move towards destination
-          // We want it to take roughly 2 minutes (120 seconds)
-          // Assuming 1 update per second.
-          // We calculate the step size based on remaining distance / 120 (simplification)
-          // To make it visible, we use a fixed step size that ensures movement
-          const speedFactor = 0.0015; // Adjust this for speed
-          
+          const speedFactor = 0.0015; 
           const angle = Math.atan2(shipment.destLat - shipment.currentLat, shipment.destLng - shipment.currentLng);
           const moveLat = Math.sin(angle) * speedFactor;
           const moveLng = Math.cos(angle) * speedFactor;
@@ -121,42 +125,165 @@ const Logistics: React.FC = () => {
           };
         });
       });
-    }, 1000); // Update every second
+    }, 1000); 
 
     return () => clearInterval(interval);
   }, []);
 
+  // 3. Agent Logic Loop
+  useEffect(() => {
+    let agentInterval: any;
+
+    if (isAutopilot) {
+      // Add initial activation log
+      setAgentLogs(prev => [...prev, {
+        id: Date.now().toString(),
+        timestamp: new Date().toLocaleTimeString(),
+        message: "Autopilot engaged. Monitoring network for critical deficits...",
+        type: 'info'
+      }]);
+
+      agentInterval = setInterval(async () => {
+        if (processingRef.current) return;
+        processingRef.current = true;
+
+        try {
+          // Get requests from local storage to be "live"
+          const storedRequests = localStorage.getItem('bloodBridge_requests');
+          const currentRequests = storedRequests ? JSON.parse(storedRequests) : INITIAL_REQUESTS;
+
+          const actions = await runAutonomousLogisticsAgent(currentRequests, INITIAL_RESOURCES);
+
+          if (actions.length > 0) {
+            actions.forEach(act => {
+              if (act.action === 'DISPATCH') {
+                 const { origin, destination, bloodType, units, method, reason } = act.details;
+                 
+                 // Create visual shipment
+                 const originCoords = HOSPITAL_DETAILS[origin] || { lat: 19.0330, lng: 73.0297 };
+                 const destCoords = HOSPITAL_DETAILS[destination] || { lat: 19.0760, lng: 72.9980 };
+
+                 const newShipment: Shipment = {
+                   id: `auto-${Math.floor(Math.random() * 10000)}`,
+                   origin,
+                   destination,
+                   bloodType: bloodType as any,
+                   units,
+                   status: 'In Transit',
+                   method,
+                   eta: method === 'Drone' ? '15 mins' : '45 mins',
+                   priority: 'Critical',
+                   currentLat: originCoords.lat,
+                   currentLng: originCoords.lng,
+                   destLat: destCoords.lat,
+                   destLng: destCoords.lng
+                 };
+
+                 setShipments(prev => [newShipment, ...prev]);
+                 
+                 setAgentLogs(prev => [...prev, {
+                    id: Date.now().toString(),
+                    timestamp: new Date().toLocaleTimeString(),
+                    message: `CRITICAL MATCH: Dispatching ${method} from ${origin} to ${destination} (${units} units ${bloodType}). Reason: ${reason}`,
+                    type: 'success'
+                 }]);
+              }
+            });
+          } else {
+            // Heartbeat log occasionally
+            if (Math.random() > 0.7) {
+                setAgentLogs(prev => [...prev, {
+                    id: Date.now().toString(),
+                    timestamp: new Date().toLocaleTimeString(),
+                    message: "Network scan complete. No new critical interventions required.",
+                    type: 'info'
+                }]);
+            }
+          }
+
+        } catch (e) {
+          console.error(e);
+        } finally {
+          processingRef.current = false;
+        }
+
+      }, 8000); // Run agent every 8 seconds
+    } else {
+      setAgentLogs([]);
+    }
+
+    return () => clearInterval(agentInterval);
+  }, [isAutopilot]);
+
   return (
     <div className="space-y-6 h-[calc(100vh-140px)] flex flex-col lg:flex-row gap-6">
       
-      {/* Left Panel: Shipment List */}
+      {/* Left Panel: Control Tower & Agent Terminal */}
       <div className="w-full lg:w-1/3 flex flex-col gap-4 h-full overflow-hidden">
-         <Card className="shrink-0 bg-slate-900 text-white border-slate-800">
-            <CardHeader className="pb-2">
-               <div className="flex items-center justify-between">
-                  <div>
-                     <CardTitle className="text-xl">Control Tower</CardTitle>
-                     <p className="text-slate-400 text-sm">Live Tracking System</p>
+         
+         {/* Agent Toggle Card */}
+         <Card className={`shrink-0 border-0 transition-all duration-500 ${isAutopilot ? 'bg-gradient-to-r from-indigo-900 to-purple-900 shadow-xl shadow-purple-900/20' : 'bg-slate-900'}`}>
+           <CardContent className="p-4 flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                 <div className={`h-10 w-10 rounded-full flex items-center justify-center transition-all ${isAutopilot ? 'bg-white text-purple-600 animate-pulse' : 'bg-slate-800 text-slate-400'}`}>
+                    <Bot className="h-6 w-6" />
+                 </div>
+                 <div>
+                    <h3 className="font-bold text-white leading-tight">Gemini Autopilot</h3>
+                    <p className="text-xs text-slate-300 opacity-80">{isAutopilot ? 'AI Agent Active' : 'Manual Control'}</p>
+                 </div>
+              </div>
+              <div 
+                 className={`w-14 h-8 rounded-full p-1 cursor-pointer transition-colors ${isAutopilot ? 'bg-green-500' : 'bg-slate-600'}`}
+                 onClick={() => setIsAutopilot(!isAutopilot)}
+              >
+                 <div className={`bg-white h-6 w-6 rounded-full shadow-sm transition-transform ${isAutopilot ? 'translate-x-6' : 'translate-x-0'}`} />
+              </div>
+           </CardContent>
+         </Card>
+
+         {/* Agent Terminal (Visible only when Active) */}
+         {isAutopilot && (
+           <Card className="shrink-0 bg-black border-slate-800 font-mono text-xs overflow-hidden flex flex-col h-48 animate-in slide-in-from-top-4">
+              <div className="bg-slate-900 p-2 border-b border-slate-800 flex items-center gap-2">
+                 <Terminal className="h-3 w-3 text-green-500" />
+                 <span className="text-slate-400">agent_log.txt</span>
+                 <div className="ml-auto flex gap-1">
+                    <div className="h-2 w-2 rounded-full bg-red-500" />
+                    <div className="h-2 w-2 rounded-full bg-yellow-500" />
+                    <div className="h-2 w-2 rounded-full bg-green-500" />
+                 </div>
+              </div>
+              <div ref={logContainerRef} className="flex-1 overflow-y-auto p-3 space-y-2 text-green-400/90 custom-scrollbar">
+                 {agentLogs.map(log => (
+                    <div key={log.id} className="animate-in fade-in slide-in-from-left-2">
+                       <span className="text-slate-500">[{log.timestamp}]</span>{' '}
+                       <span className={log.type === 'success' ? 'text-blue-400 font-bold' : ''}>
+                          {log.type === 'success' ? '>> ACTION: ' : '> '}
+                          {log.message}
+                       </span>
+                    </div>
+                 ))}
+                 <div className="animate-pulse">_</div>
+              </div>
+           </Card>
+         )}
+
+         {/* Stats Panel */}
+         <Card className="shrink-0 bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800">
+            <CardContent className="p-4 grid grid-cols-2 gap-4">
+                  <div className="bg-slate-100 dark:bg-slate-800 p-3 rounded-lg border border-slate-200 dark:border-slate-700">
+                     <div className="text-2xl font-bold text-slate-900 dark:text-white">{shipments.filter(s => s.status === 'In Transit').length}</div>
+                     <div className="text-xs text-slate-500 uppercase tracking-wider">In Transit</div>
                   </div>
-                  <div className="h-10 w-10 bg-blue-600 rounded-full flex items-center justify-center shadow-lg shadow-blue-900/50">
-                     <Navigation className="h-5 w-5 text-white" />
+                  <div className="bg-slate-100 dark:bg-slate-800 p-3 rounded-lg border border-slate-200 dark:border-slate-700">
+                     <div className="text-2xl font-bold text-green-600">{shipments.filter(s => s.status === 'Delivered').length}</div>
+                     <div className="text-xs text-slate-500 uppercase tracking-wider">Delivered</div>
                   </div>
-               </div>
-            </CardHeader>
-            <CardContent>
-               <div className="grid grid-cols-2 gap-4">
-                  <div className="bg-slate-800/50 p-3 rounded-lg border border-slate-700">
-                     <div className="text-2xl font-bold">{shipments.filter(s => s.status === 'In Transit').length}</div>
-                     <div className="text-xs text-slate-400 uppercase tracking-wider">In Transit</div>
-                  </div>
-                  <div className="bg-slate-800/50 p-3 rounded-lg border border-slate-700">
-                     <div className="text-2xl font-bold text-green-400">{shipments.filter(s => s.status === 'Delivered').length}</div>
-                     <div className="text-xs text-slate-400 uppercase tracking-wider">Delivered</div>
-                  </div>
-               </div>
             </CardContent>
          </Card>
 
+         {/* Active Shipments List */}
          <div className="flex-1 overflow-y-auto custom-scrollbar pr-2 space-y-3">
             {shipments.map(shipment => (
                <Card key={shipment.id} className={`border-l-4 cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors ${
@@ -169,6 +296,7 @@ const Logistics: React.FC = () => {
                         <div className="flex items-center gap-2">
                            {shipment.method === 'Drone' ? <Plane className="h-4 w-4 text-blue-500" /> : <Truck className="h-4 w-4 text-slate-500" />}
                            <span className="font-bold text-sm text-slate-900 dark:text-white">{shipment.id}</span>
+                           {shipment.id.startsWith('auto') && <Badge className="bg-purple-100 text-purple-700 h-5 px-1.5 text-[10px]">AI</Badge>}
                         </div>
                         <Badge variant={shipment.status === 'In Transit' ? 'warning' : shipment.status === 'Delivered' ? 'success' : 'outline'} className="text-xs">
                            {shipment.status}
@@ -243,7 +371,6 @@ const Logistics: React.FC = () => {
                   {/* Route Line */}
                   <Polyline 
                      positions={[
-                        // If In Transit, draw from Current to Dest. If Delivered, line disappears or stays full? Let's keep it for visual.
                         [shipment.currentLat, shipment.currentLng], 
                         [shipment.destLat, shipment.destLng]
                      ]} 
@@ -264,6 +391,7 @@ const Logistics: React.FC = () => {
                         <div className="font-bold text-sm">{shipment.id} ({shipment.method})</div>
                         <div className="text-xs">To: {shipment.destination}</div>
                         <div className="text-xs mt-1 font-semibold text-green-600">Status: {shipment.status}</div>
+                        {shipment.id.startsWith('auto') && <div className="text-xs text-purple-600 font-bold mt-1">AI Dispatched</div>}
                      </Popup>
                   </Marker>
 
@@ -291,7 +419,18 @@ const Logistics: React.FC = () => {
 
          {/* User Location Button */}
          <div className="absolute bottom-6 right-6 z-[400]">
-            <button className="h-12 w-12 bg-slate-800 rounded-full flex items-center justify-center text-white shadow-xl hover:bg-slate-700">
+            <button 
+                onClick={() => {
+                    if(navigator.geolocation) {
+                        setLoadingLoc(true);
+                        navigator.geolocation.getCurrentPosition(
+                            pos => { setUserLocation([pos.coords.latitude, pos.coords.longitude]); setLoadingLoc(false); },
+                            () => setLoadingLoc(false)
+                        )
+                    }
+                }}
+                className="h-12 w-12 bg-slate-800 rounded-full flex items-center justify-center text-white shadow-xl hover:bg-slate-700"
+            >
                <Crosshair className={`h-6 w-6 ${loadingLoc ? 'animate-spin' : ''}`} />
             </button>
          </div>

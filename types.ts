@@ -79,6 +79,13 @@ export interface Shipment {
   destLng: number;
 }
 
+export interface AgentLog {
+  id: string;
+  timestamp: string;
+  message: string;
+  type: 'info' | 'action' | 'alert' | 'success';
+}
+
 // --- AUTH TYPES ---
 export type UserRole = 'admin' | 'donor' | 'hospital';
 
