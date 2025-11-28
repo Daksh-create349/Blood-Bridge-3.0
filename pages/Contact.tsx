@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Card, CardContent, Input, Button, Textarea } from '../components/ui/UIComponents';
 import { Mail, Send, MessageSquare, CheckCircle2, AlertCircle } from 'lucide-react';
@@ -9,6 +8,7 @@ const Contact: React.FC = () => {
   const { user } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
   const [status, setStatus] = useState<'idle' | 'success' | 'error'>('idle');
+  const [errorMessage, setErrorMessage] = useState('');
   
   const [formData, setFormData] = useState({
     name: user?.name || '',
@@ -21,19 +21,21 @@ const Contact: React.FC = () => {
     e.preventDefault();
     setIsLoading(true);
     setStatus('idle');
+    setErrorMessage('');
 
     try {
-      // Directly using the provided EmailJS credentials
-      const serviceId = "service_0qd96re";
-      const templateId = "template_elvmzi";
-      const publicKey = "sQLEAGaWbZVp079Gx";
+      // Hardcoded credentials as requested, with trim() to ensure no copy-paste whitespace issues
+      const serviceId = "service_0qd96re".trim();
+      const templateId = "template_elvmzi".trim();
+      const publicKey = "sQLEAGaWbZVp079Gx".trim();
+
+      console.log("Attempting to send email with:", { serviceId, templateId, publicKey: "HIDDEN" });
 
       if (!serviceId || !templateId || !publicKey) {
-        throw new Error("EmailJS Configuration Missing.");
+        throw new Error("EmailJS Configuration Missing (Empty Keys).");
       }
 
-      // Prepare the parameters exactly as they appear in the EmailJS template
-      // Ensure your EmailJS template variables match these keys (e.g. {{name}}, {{message}})
+      // Prepare the parameters
       const templateParams = {
         name: formData.name,
         email: formData.email,
@@ -45,12 +47,22 @@ const Contact: React.FC = () => {
       await emailjs.send(serviceId, templateId, templateParams, publicKey);
       
       setStatus('success');
-      setFormData({ ...formData, title: '', message: '' }); // Clear message/title but keep name/email
+      setFormData({ ...formData, title: '', message: '' }); 
     } catch (error: any) {
       console.error("Failed to send message:", error);
+      let msg = "Failed to send message.";
+      
       if (error.text) {
           console.error("EmailJS Error Details:", error.text);
+          if (error.text.includes("template ID not found")) {
+             msg = `Error: Template ID '${"template_elvmzi"}' not found. Please verify it in your EmailJS dashboard.`;
+          } else if (error.text.includes("service ID not found")) {
+             msg = `Error: Service ID '${"service_0qd96re"}' not found. Please verify it in your EmailJS dashboard.`;
+          } else {
+             msg = `Error: ${error.text}`;
+          }
       }
+      setErrorMessage(msg);
       setStatus('error');
     } finally {
       setIsLoading(false);
@@ -146,9 +158,12 @@ const Contact: React.FC = () => {
                     />
 
                     {status === 'error' && (
-                       <div className="p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg flex items-center gap-2 text-sm text-red-600 dark:text-red-400">
-                          <AlertCircle className="h-4 w-4" />
-                          Failed to send message. Please check the browser console (F12) for details.
+                       <div className="p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg flex items-start gap-2 text-sm text-red-600 dark:text-red-400">
+                          <AlertCircle className="h-4 w-4 mt-0.5 shrink-0" />
+                          <div>
+                            <p className="font-bold">Message failed to send.</p>
+                            <p className="opacity-90 text-xs mt-1">{errorMessage || "Check the browser console (F12) for more details."}</p>
+                          </div>
                        </div>
                     )}
 
